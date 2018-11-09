@@ -1,0 +1,19 @@
+{
+  "name": "@slimio/alerting",
+  "version": "1.0.0",
+  "description": "SlimIO - Alerting Addon",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SlimIO/Alerting.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SlimIO/Alerting/issues"
+  },
+  "homepage": "https://github.com/SlimIO/Alerting#readme"
+}

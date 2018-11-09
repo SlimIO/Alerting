@@ -1,0 +1,10 @@
+test/
+tests/
+coverage/
+.nyc_output/
+jsdocs/
+jsdoc.json
+CONTRIBUTING.md
+.editorconfig
+.eslintrc
+.gitignore
