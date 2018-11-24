@@ -20,7 +20,7 @@
     "@slimio/eslint-config": "^1.1.8"
   },
   "dependencies": {
-    "@slimio/addon": "^0.14.0",
+    "@slimio/addon": "^0.14.2",
     "@slimio/is": "^1.3.0"
   }
 }
