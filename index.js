@@ -126,7 +126,6 @@ Alerting.of("Metric.insert").subscribe(([id, value]) => {
             Alerting.sendMessage("events.create_alarm", { args: [threshold.alarm] });
         }
     }
-
 });
 
 Alerting.of("Alarm.update").subscribe({
@@ -136,7 +135,7 @@ Alerting.of("Alarm.update").subscribe({
         console.log(`[ALERTING] Updated timestamp : ${timestamp}`);
         if (stormRules.has(CID)) {
             const data = stormRules.get(CID);
-            const limitDate = timestamp - data.time * 60;
+            const limitDate = (timestamp - data.time) * 60;
             console.log(`[ALERTING] limitDate : ${limitDate}`);
             data.timestamps = data.timestamps.filter((dataTime) => dataTime > limitDate);
 
@@ -183,7 +182,6 @@ Alerting.on("start", () => {
     // const checkEntities = [];
     // const entityLink = [];
     // const descriptors = [];
-
 });
 
 
