@@ -4,14 +4,15 @@ const is = require("@slimio/is");
 const { assertAlarm } = require("@slimio/utils");
 const Queue = require("@slimio/queue");
 
-const Alerting = new Addon("Alerting");
-
+// Globals
 const stormRules = new Map();
 const queue = new Queue();
-let eventLaoded = false;
 
 const thresholdSigns = new Set(["<", ">", "<=", ">=", "==", "!="]);
 const thresholds = new Map();
+
+
+const Alerting = new Addon("Alerting").lockOn("events");
 
 /**
  * @async
@@ -25,7 +26,6 @@ const thresholds = new Map();
  * @returns {Promise<void>}
  */
 async function setStormRule(header, CID, { time, occurence, severity }) {
-    console.log("[ALERTING] Receive a strom Rule");
     if (!is.string(CID)) {
         throw new TypeError("CID param must be a type of <string>");
     }
@@ -35,9 +35,9 @@ async function setStormRule(header, CID, { time, occurence, severity }) {
     if (!is.number(occurence)) {
         throw new TypeError("occurence param must be a type of <number>");
     }
-    console.log("[ALERTING] Set a strom Rule");
+
+    console.log("[ALERTING] Set new storm Rule");
     stormRules.set(CID, { time, occurence, severity, timestamps: [] });
-    console.log(stormRules);
 }
 
 /**
@@ -66,8 +66,6 @@ async function setThreshold(header, micId, [rule, alarm]) {
 
     function publishMsg() {
         Alerting.sendMessage("events.get_mic", { args: [micId] }).subscribe((mic) => {
-            console.log(mic);
-
             alarm.entityId = mic.entity_id;
             assertAlarm(alarm);
 
@@ -77,11 +75,11 @@ async function setThreshold(header, micId, [rule, alarm]) {
         });
     }
 
-    if (eventLaoded === false) {
-        queue.enqueue("threshold", publishMsg);
+    if (Alerting.isAwake) {
+        publishMsg();
     }
     else {
-        publishMsg();
+        queue.enqueue("threshold", publishMsg);
     }
 }
 
@@ -154,36 +152,21 @@ Alerting.of("Alarm.update").subscribe({
     }
 });
 
-Alerting.of("Addon.ready").subscribe({
-    next(addonName) {
-        console.log(`[ALERTING] Addon ready : ${addonName}`);
-        Alerting.ready();
-        if (addonName === "events") {
-            eventLaoded = true;
-            if (queue.has("threshold")) {
-                const allThresoldRules = [...queue.dequeueAll("threshold")];
-                console.log("[ALERTING] Threshold rules :");
-                console.log(allThresoldRules);
-                /* eslint-disable-next-line */
-                allThresoldRules.map((func) => {
-                    func();
-                });
-            }
-        }
-    },
-    error(err) {
-        console.log(`[ALERTING] Addon.ready | Finished with error: ${err}`);
-    }
-});
-
 Alerting.on("start", () => {
     console.log("[ALERTING] Start event triggered !");
-
-    // const checkEntities = [];
-    // const entityLink = [];
-    // const descriptors = [];
+    Alerting.ready();
 });
 
+Alerting.on("awake", () => {
+    if (!queue.has("threshold")) {
+        return;
+    }
+
+    console.log("[ALERTING] Threshold rules :");
+    for (const func of queue.dequeueAll("threshold")) {
+        func();
+    }
+});
 
 Alerting.registerCallback("set_storm_rule", setStormRule);
 Alerting.registerCallback("set_threshold", setThreshold);
