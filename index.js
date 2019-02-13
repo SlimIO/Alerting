@@ -1,14 +1,9 @@
 // Require Third-Party Dependencies
 const Addon = require("@slimio/addon");
 const is = require("@slimio/is");
-const { assertAlarm } = require("@slimio/utils");
 
 // Globals
 const stormRules = new Map();
-const thresholds = new Map();
-
-// CONSTANTS
-const THRESHOLD_SIGN = new Set(["<", ">", "<=", ">=", "==", "!="]);
 
 // Create Addon
 const Alerting = new Addon("Alerting").lockOn("events");
@@ -38,69 +33,6 @@ async function setStormRule(header, CID, { time, occurence, severity }) {
     console.log("[ALERTING] Set new storm Rule");
     stormRules.set(CID, { time, occurence, severity, timestamps: [] });
 }
-
-/**
- * @async
- * @desc Set a threshold rule
- * @param {*} header Callback Header
- * @param {!Number} micId micId
- * @param {!Object} rule rule
- * @param {!Object} alarm alarm
- * @returns {Promise<void>}
- */
-async function setThreshold(header, micId, [rule, alarm]) {
-    if (!is.number(micId)) {
-        throw new TypeError("micId param must be a type of <number>");
-    }
-    if (!THRESHOLD_SIGN.has(rule.sign)) {
-        throw new TypeError(`sign param can be one of those value : [${[...THRESHOLD_SIGN]}]`);
-    }
-    if (!is.number(rule.value)) {
-        throw new TypeError("value param must be a type of <number>");
-    }
-
-    const mic = await new Promise((resolve) => {
-        return Alerting.sendMessage("events.get_mic", { args: [micId] }).subscribe(resolve);
-    });
-
-    alarm.entityId = mic.entity_id;
-    assertAlarm(alarm);
-    thresholds.set(micId, { rule, alarm });
-}
-
-Alerting.of("Metric.insert").subscribe(([id, value]) => {
-    console.log(`[ALERTING] Metric id : ${id}, value: ${value}`);
-    if (thresholds.has(id)) {
-        const threshold = thresholds.get(id);
-        let createAlarm = false;
-
-        switch (threshold.sign) {
-            case "<":
-                createAlarm = value < thresholds.value;
-                break;
-            case ">":
-                createAlarm = value > thresholds.value;
-                break;
-            case "<=":
-                createAlarm = value <= thresholds.value;
-                break;
-            case ">=":
-                createAlarm = value >= thresholds.value;
-                break;
-            case "==":
-                createAlarm = value === thresholds.value;
-                break;
-            case "!=":
-                createAlarm = value !== thresholds.value;
-                break;
-            default:
-                console.log("[ALERTING] Metric.insert : sign not find");
-        }
-        if (createAlarm === true) {
-            Alerting.sendMessage("events.create_alarm", { args: [threshold.alarm] });
-        }
-    }
-});
 
 Alerting.of(Addon.Subjects.Alarm.Update).subscribe({
     next([CID, occurence, timestamp]) {
@@ -136,8 +68,7 @@ Alerting.on("awake", () => {
     Alerting.ready();
 });
 
-Alerting.registerCallback("set_storm_rule", setStormRule);
-Alerting.registerCallback("set_threshold", setThreshold);
+Alerting.registerCallback("register_storm_rule", setStormRule);
 
 // Export "Alerting" addon for Core
 module.exports = Alerting;
