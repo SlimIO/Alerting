@@ -2,16 +2,15 @@
 const Addon = require("@slimio/addon");
 const is = require("@slimio/is");
 const { assertAlarm } = require("@slimio/utils");
-const Queue = require("@slimio/queue");
 
 // Globals
 const stormRules = new Map();
-const queue = new Queue();
-
-const thresholdSigns = new Set(["<", ">", "<=", ">=", "==", "!="]);
 const thresholds = new Map();
 
+// CONSTANTS
+const THRESHOLD_SIGN = new Set(["<", ">", "<=", ">=", "==", "!="]);
 
+// Create Addon
 const Alerting = new Addon("Alerting").lockOn("events");
 
 /**
@@ -50,47 +49,24 @@ async function setStormRule(header, CID, { time, occurence, severity }) {
  * @returns {Promise<void>}
  */
 async function setThreshold(header, micId, [rule, alarm]) {
-    console.log("[ALERTING] setThreshold");
     if (!is.number(micId)) {
         throw new TypeError("micId param must be a type of <number>");
     }
-    if (!is.string(rule.sign)) {
-        throw new TypeError("sign param must be a type of <string>");
-    }
-    if (!thresholdSigns.has(rule.sign)) {
-        throw new TypeError(`sign param can be one of those value : [${[...thresholdSigns]}]`);
+    if (!THRESHOLD_SIGN.has(rule.sign)) {
+        throw new TypeError(`sign param can be one of those value : [${[...THRESHOLD_SIGN]}]`);
     }
     if (!is.number(rule.value)) {
         throw new TypeError("value param must be a type of <number>");
     }
 
-    function publishMsg() {
-        Alerting.sendMessage("events.get_mic", { args: [micId] }).subscribe((mic) => {
-            alarm.entityId = mic.entity_id;
-            assertAlarm(alarm);
+    const mic = await new Promise((resolve) => {
+        return Alerting.sendMessage("events.get_mic", { args: [micId] }).subscribe(resolve);
+    });
 
-            console.log("[ALERTING] Set a threshold Rule");
-            thresholds.set(micId, { rule, alarm });
-            console.log(thresholds);
-        });
-    }
-
-    if (Alerting.isAwake) {
-        publishMsg();
-    }
-    else {
-        queue.enqueue("threshold", publishMsg);
-    }
+    alarm.entityId = mic.entity_id;
+    assertAlarm(alarm);
+    thresholds.set(micId, { rule, alarm });
 }
-
-Alerting.of(Addon.Subjects.Alarm.Open).subscribe({
-    next(CID) {
-        console.log(`[Alerting] Open CID : ${CID}`);
-    },
-    error(err) {
-        console.log(`[ALERTING] Alarm.open | Finished with error: ${err}`);
-    }
-});
 
 Alerting.of("Metric.insert").subscribe(([id, value]) => {
     console.log(`[ALERTING] Metric id : ${id}, value: ${value}`);
@@ -126,7 +102,7 @@ Alerting.of("Metric.insert").subscribe(([id, value]) => {
     }
 });
 
-Alerting.of("Alarm.update").subscribe({
+Alerting.of(Addon.Subjects.Alarm.Update).subscribe({
     next([CID, occurence, timestamp]) {
         console.log(`[ALERTING] Updated CID : ${CID}`);
         console.log(`[ALERTING] Updated occurence : ${occurence}`);
@@ -154,18 +130,10 @@ Alerting.of("Alarm.update").subscribe({
 
 Alerting.on("start", () => {
     console.log("[ALERTING] Start event triggered !");
-    Alerting.ready();
 });
 
 Alerting.on("awake", () => {
-    if (!queue.has("threshold")) {
-        return;
-    }
-
-    console.log("[ALERTING] Threshold rules :");
-    for (const func of queue.dequeueAll("threshold")) {
-        func();
-    }
+    Alerting.ready();
 });
 
 Alerting.registerCallback("set_storm_rule", setStormRule);

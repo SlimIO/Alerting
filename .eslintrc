@@ -1,6 +1,7 @@
 {
     "extends": "@slimio/eslint-config",
     "rules": {
-        "require-await": "off"
+        "require-await": "off",
+        "arrow-body-style": "off"
     }
 }
