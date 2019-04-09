@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@slimio/addon": "^0.15.3",
-    "@slimio/is": "^1.4.0",
-    "@slimio/utils": "^0.6.0"
+    "@slimio/alert": "^0.1.0",
+    "@slimio/timemap": "^0.2.0"
   }
 }
