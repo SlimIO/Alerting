@@ -29,11 +29,31 @@ const { Alarm } = alert(Alerting);
  */
 async function setStormRule(header, CID, rule) {
     if (typeof CID !== "string") {
-        throw new TypeError("CID param must be a type of <string>");
+        throw new TypeError("CID param must be a typeof <string>");
     }
 
     const { time = 60, occurence, severity = Alarm.Severity.Minor } = rule;
     Storms.set(CID, new StormRule(time, occurence, severity));
+}
+
+/**
+ * @async
+ * @desc Set a rule storm
+ * @param {*} header Callback Header
+ * @param {!String} entityName entity name
+ * @param {!Object} options Assertion options
+ * @param {Boolean} options.exist If the entity must exist or not
+ * @param {String} options.parent Assert the entity parent
+ * @returns {Promise<void>}
+ *
+ * @throws {TypeError}
+ */
+async function assertEntity(header, entityName, options) {
+    if (typeof entityName !== "string") {
+        throw new TypeError("entityName param must be typeof <string>");
+    }
+
+    const { exist = true, parent = null } = options;
 }
 
 // Catch Alarm Update events
@@ -59,6 +79,7 @@ Alerting.on("awake", () => {
 });
 
 Alerting.registerCallback("register_storm_rule", setStormRule);
+Alerting.registerCallback("assert_entity", assertEntity);
 
 // Export "Alerting" addon for Core
 module.exports = Alerting;

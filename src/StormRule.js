@@ -42,7 +42,6 @@ class StormRule {
         const rows = this[symRows];
         rows.set(Date.now(), null);
 
-        console.log(rows.size);
         if (rows.size >= this.occurence) {
             rows.clear();
 
