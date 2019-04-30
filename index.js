@@ -23,6 +23,7 @@ const Alerting = new Addon("alerting").lockOn("events");
 // Get Alarm Object
 const { Alarm } = alert(Alerting);
 
+// UTILS
 function sendMessage(target, args) {
     return new Promise((resolve, reject) => {
         Alerting.sendMessage(target, { args }).subscribe(resolve, reject);
@@ -69,48 +70,61 @@ async function assertEntity(header, entityName, options) {
     }
 
     console.log("RECEIVING ASSERT ENTITY");
-    const { exist = true, parent = null } = options;
-    Entities.set(entityName, { exist, parent });
+    const {
+        exist = true, parent = null, hasNoChild = false, descriptors = []
+    } = options;
+    Entities.set(entityName, { exist, parent, hasNoChild, descriptors });
 }
 
-async function assertEntityInterval() {
-    for (const [entity, options] of Entities.entries()) {
-        try {
-            const ret = await sendMessage("events.search_entities", [{ name: entity }]);
-            const isDefined = typeof ret !== "undefined";
+async function checkEntity(entity, { exist, parent, hasNoChild }) {
+    try {
+        const ret = await sendMessage("events.search_entities", [{ name: entity }]);
+        const isDefined = typeof ret !== "undefined";
 
-            const correlateKey = `alert_ae_${entity.toLowerCase()}`;
-            if (options.exist && !isDefined) {
-                new Alarm(`Unable to found entity with name ${entity}`, {
-                    correlateKey
+        // Assert Entity
+        const correlateKey = `alert_ae_${entity.toLowerCase()}`;
+        if (exist && !isDefined) {
+            new Alarm(`Unable to found entity with name ${entity}`, {
+                correlateKey
+            });
+        }
+        else if (!exist && isDefined) {
+            new Alarm(`Entity '${entity}' has been detected but it should not exist (Alerting Assertion).`, {
+                entity, correlateKey
+            });
+        }
+
+        // Assert that the current Entity have no childs
+        if (isDefined && hasNoChild) {
+            const args = { fields: "name", pattern: `${ret.id}`, patternIdentifier: "parent" };
+            const result = await sendMessage("events.search_entities", [args]);
+            if (result.length > 0) {
+                new Alarm(`Entity '${entity}' is supposed to have no children but '${result.length}' was detected!`, {
+                    entity, correlateKey: `alert_cl_${entity.toLowerCase()}`
                 });
             }
-            else if (!options.exist && isDefined) {
-                new Alarm(`Entity '${entity}' has been detected but it should not exist (Alerting Assertion).`, {
+        }
+
+        // Assert Entity parent id
+        const parentType = typeof parent;
+        if ((parentType === "string" || parentType === "number") && isDefined) {
+            const parentEntity = { id: parent };
+            if (parentType === "string") {
+                const result = await sendMessage("events.search_entities", [{ name: parent, fields: "id" }]);
+                parentEntity.id = result.id;
+            }
+
+            if (parentEntity.id !== ret.parent) {
+                const correlateKey = `alert_pp_${entity.toLowerCase()}`;
+                // eslint-disable-next-line
+                new Alarm(`Parent ID must be equal to '${parentEntity.id}' for ${entity} but was detected as '${ret.parent}'`, {
                     entity, correlateKey
                 });
             }
-
-            const parentType = typeof options.parent;
-            if ((parentType === "string" || parentType === "number") && isDefined) {
-                const parentEntity = { id: options.parent };
-                if (parentType === "string") {
-                    const result = await sendMessage("events.search_entities", [{ name: options.parent, fields: "id" }]);
-                    parentEntity.id = result.id;
-                }
-
-                if (parentEntity.id !== ret.parent) {
-                    const correlateKey = `alert_pp_${entity.toLowerCase()}`;
-                    // eslint-disable-next-line
-                    new Alarm(`Parent ID must be equal to '${parentEntity.id}' for ${entity} but was detected as '${ret.parent}'`, {
-                        entity, correlateKey
-                    });
-                }
-            }
         }
-        catch (err) {
-            console.error(err);
-        }
+    }
+    catch (err) {
+        console.error(err);
     }
 }
 
@@ -133,7 +147,11 @@ Alerting.of(Addon.Subjects.Alarm.Update).filter(([CID]) => Storms.has(CID)).subs
 });
 
 Alerting.on("awake", () => {
-    entityInterval = timer.setInterval(assertEntityInterval, ENTITY_INTERVAL_MS);
+    entityInterval = timer.setInterval(() => {
+        for (const [entity, options] of Entities.entries()) {
+            setImmediate(() => checkEntity(entity, options).catch(console.error));
+        }
+    }, ENTITY_INTERVAL_MS);
     Alerting.ready();
 });
 
