@@ -70,32 +70,14 @@ async function assertEntity(header, entityName, options) {
 
     console.log("RECEIVING ASSERT ENTITY");
     const { exist = true, parent = null } = options;
-    if (parent !== null) {
-        const pType = typeof parent;
-        if (pType !== "number" || pType !== "string") {
-            throw new TypeError("parent param must be typeof <number> or <string>");
-        }
-
-        let entity;
-        if (pType === "number") {
-            entity = await sendMessage("events.get_entity_by_id", [parent]);
-        }
-        else {
-            entity = await sendMessage("events.search_entities", [{ name: parent }]);
-        }
-
-        // TODO: verify if parent exist!
-    }
     Entities.set(entityName, { exist, parent });
 }
 
 async function assertEntityInterval() {
-    console.log("assert entity interval");
     for (const [entity, options] of Entities.entries()) {
         try {
             const ret = await sendMessage("events.search_entities", [{ name: entity }]);
             const isDefined = typeof ret !== "undefined";
-            console.log("Entity: \n", ret);
 
             const correlateKey = `alert_ae_${entity.toLowerCase()}`;
             if (options.exist && !isDefined) {
@@ -107,6 +89,23 @@ async function assertEntityInterval() {
                 new Alarm(`Entity '${entity}' has been detected but it should not exist (Alerting Assertion).`, {
                     entity, correlateKey
                 });
+            }
+
+            const parentType = typeof options.parent;
+            if ((parentType === "string" || parentType === "number") && isDefined) {
+                const parentEntity = { id: options.parent };
+                if (parentType === "string") {
+                    const result = await sendMessage("events.search_entities", [{ name: options.parent, fields: "id" }]);
+                    parentEntity.id = result.id;
+                }
+
+                if (parentEntity.id !== ret.parent) {
+                    const correlateKey = `alert_pp_${entity.toLowerCase()}`;
+                    // eslint-disable-next-line
+                    new Alarm(`Parent ID must be equal to '${parentEntity.id}' for ${entity} but was detected as '${ret.parent}'`, {
+                        entity, correlateKey
+                    });
+                }
             }
         }
         catch (err) {
