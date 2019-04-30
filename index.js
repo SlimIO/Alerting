@@ -69,14 +69,13 @@ async function assertEntity(header, entityName, options) {
         throw new TypeError("entityName param must be typeof <string>");
     }
 
-    console.log("RECEIVING ASSERT ENTITY");
     const {
-        exist = true, parent = null, hasNoChild = false, descriptors = []
+        exist = true, parent = null, hasNoChild = false, descriptors = Object.create(null)
     } = options;
     Entities.set(entityName, { exist, parent, hasNoChild, descriptors });
 }
 
-async function checkEntity(entity, { exist, parent, hasNoChild }) {
+async function checkEntity(entity, { exist, parent, hasNoChild, descriptors }) {
     try {
         const ret = await sendMessage("events.search_entities", [{ name: entity }]);
         const isDefined = typeof ret !== "undefined";
@@ -102,6 +101,34 @@ async function checkEntity(entity, { exist, parent, hasNoChild }) {
                 new Alarm(`Entity '${entity}' is supposed to have no children but '${result.length}' was detected!`, {
                     entity, correlateKey: `alert_cl_${entity.toLowerCase()}`
                 });
+            }
+        }
+
+        // Assert Entity Descriptors
+        const descriptorEntries = Object.entries(descriptors);
+        if (isDefined && descriptorEntries.length > 0) {
+            const rawResult = await sendMessage("events.get_descriptors", [ret.id]);
+            const dbDescriptors = rawResult.reduce((prev, curr) => {
+                prev[curr.key] = curr.value;
+
+                return prev;
+            }, {});
+
+            for (const [key, value] of descriptorEntries) {
+                const correlateKey = `alert_dc_${entity.toLowerCase()}`;
+                if (Reflect.has(dbDescriptors, key)) {
+                    const currValue = dbDescriptors[key];
+                    if (currValue !== value) {
+                        new Alarm(`Incorrect value for descriptor '${key}' on entity '${entity}'`, {
+                            entity, correlateKey
+                        });
+                    }
+                }
+                else {
+                    new Alarm(`Unable to found descriptor '${key}' on entity '${entity}'`, {
+                        entity, correlateKey
+                    });
+                }
             }
         }
 
