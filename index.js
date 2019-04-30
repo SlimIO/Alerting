@@ -23,13 +23,6 @@ const Alerting = new Addon("alerting").lockOn("events");
 // Get Alarm Object
 const { Alarm } = alert(Alerting);
 
-// UTILS
-function sendMessage(target, args) {
-    return new Promise((resolve, reject) => {
-        Alerting.sendMessage(target, { args }).subscribe(resolve, reject);
-    });
-}
-
 /**
  * @async
  * @desc Set a rule storm
@@ -77,7 +70,7 @@ async function assertEntity(header, entityName, options) {
 
 async function checkEntity(entity, { exist, parent, hasNoChild, descriptors }) {
     try {
-        const ret = await sendMessage("events.search_entities", [{ name: entity }]);
+        const ret = await Alerting.sendOne("events.search_entities", [{ name: entity }]);
         const isDefined = typeof ret !== "undefined";
 
         // Assert Entity
@@ -96,7 +89,7 @@ async function checkEntity(entity, { exist, parent, hasNoChild, descriptors }) {
         // Assert that the current Entity have no childs
         if (isDefined && hasNoChild) {
             const args = { fields: "name", pattern: `${ret.id}`, patternIdentifier: "parent" };
-            const result = await sendMessage("events.search_entities", [args]);
+            const result = await Alerting.sendOne("events.search_entities", [args]);
             if (result.length > 0) {
                 new Alarm(`Entity '${entity}' is supposed to have no children but '${result.length}' was detected!`, {
                     entity, correlateKey: `alert_cl_${entity.toLowerCase()}`
@@ -107,7 +100,7 @@ async function checkEntity(entity, { exist, parent, hasNoChild, descriptors }) {
         // Assert Entity Descriptors
         const descriptorEntries = Object.entries(descriptors);
         if (isDefined && descriptorEntries.length > 0) {
-            const rawResult = await sendMessage("events.get_descriptors", [ret.id]);
+            const rawResult = await Alerting.sendOne("events.get_descriptors", [ret.id]);
             const dbDescriptors = rawResult.reduce((prev, curr) => {
                 prev[curr.key] = curr.value;
 
@@ -137,7 +130,7 @@ async function checkEntity(entity, { exist, parent, hasNoChild, descriptors }) {
         if ((parentType === "string" || parentType === "number") && isDefined) {
             const parentEntity = { id: parent };
             if (parentType === "string") {
-                const result = await sendMessage("events.search_entities", [{ name: parent, fields: "id" }]);
+                const result = await Alerting.sendOne("events.search_entities", [{ name: parent, fields: "id" }]);
                 parentEntity.id = result.id;
             }
 
