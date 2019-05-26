@@ -35,6 +35,7 @@
     "@commitlint/cli": "^7.6.1",
     "@commitlint/config-conventional": "^7.6.0",
     "@slimio/eslint-config": "^2.0.4",
+    "ava": "^1.4.1",
     "eslint": "^5.16.0",
     "husky": "^2.3.0",
     "jsdoc": "^3.6.2"
