@@ -1,19 +1,18 @@
+"use strict";
+
 // Require Third-party Dependencies
 const TimeMap = require("@slimio/timemap");
 
 // Symbols
 const symRows = Symbol("rows");
 
-/**
- * @class StormRule
- */
 class StormRule {
     /**
-     * @constructor
+     * @class StormRule
      * @memberof StormRule#
-     * @param {!Number} time time delay in milliseconds
-     * @param {!Number} occurence maximum number of occurence in the time
-     * @param {!Number} severity severity
+     * @param {!number} time time delay in milliseconds
+     * @param {!number} occurence maximum number of occurence in the time
+     * @param {!number} severity severity
      *
      * @throws {TypeError}
      */
@@ -34,9 +33,9 @@ class StormRule {
     }
 
     /**
-     * @method walk
+     * @function walk
      * @memberof StormRule#
-     * @return {Boolean}
+     * @returns {boolean}
      */
     walk() {
         const rows = this[symRows];

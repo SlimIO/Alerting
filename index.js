@@ -1,3 +1,5 @@
+"use strict";
+
 // Require Third-Party Dependencies
 const Addon = require("@slimio/addon");
 const timer = require("@slimio/timer");
@@ -9,10 +11,10 @@ const StormRule = require("./src/StormRule");
 // CONSTANTS
 const ENTITY_INTERVAL_MS = 5000;
 
-/** @type {Map<String, StormRule>} */
+/** @type {Map<string, StormRule>} */
 const Storms = new Map();
 
-/** @type {Map<String, any>} */
+/** @type {Map<string, any>} */
 const Entities = new Map();
 
 let entityInterval;
@@ -25,13 +27,13 @@ const { Alarm } = alert(Alerting);
 
 /**
  * @async
- * @desc Set a rule storm
+ * @description Set a rule storm
  * @param {*} header Callback Header
- * @param {!String} CID Correlation key Id
- * @param {!Object} rule Storm rule
- * @param {!Number} rule.time Rule interval time
- * @param {!Number} rule.occurence Rule occurence
- * @param {!Number} rule.severity Rule severity
+ * @param {!string} CID Correlation key Id
+ * @param {!object} rule Storm rule
+ * @param {!number} rule.time Rule interval time
+ * @param {!number} rule.occurence Rule occurence
+ * @param {!number} rule.severity Rule severity
  * @returns {Promise<void>}
  *
  * @throws {TypeError}
@@ -47,12 +49,12 @@ async function setStormRule(header, CID, rule) {
 
 /**
  * @async
- * @desc Set a rule storm
+ * @description Set a rule storm
  * @param {*} header Callback Header
- * @param {!String} entityName entity name
- * @param {!Object} options Assertion options
- * @param {Boolean} options.exist If the entity must exist or not
- * @param {String} options.parent Assert the entity parent
+ * @param {!string} entityName entity name
+ * @param {!object} options Assertion options
+ * @param {boolean} options.exist If the entity must exist or not
+ * @param {string} options.parent Assert the entity parent
  * @returns {Promise<void>}
  *
  * @throws {TypeError}
@@ -68,6 +70,13 @@ async function assertEntity(header, entityName, options) {
     Entities.set(entityName, { exist, parent, hasNoChild, descriptors });
 }
 
+/**
+ * @async
+ * @function checkEntity
+ * @param {*} entity
+ * @param {!object} options
+ * @returns {Promise<void>}
+ */
 async function checkEntity(entity, { exist, parent, hasNoChild, descriptors }) {
     try {
         const ret = await Alerting.sendOne("events.search_entities", [{ name: entity }]);
