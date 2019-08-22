@@ -27,8 +27,9 @@ const { Alarm } = alert(Alerting);
 
 /**
  * @async
+ * @function registerStormRule
  * @description Set a rule storm
- * @param {*} header Callback Header
+ * @param {!Addon.CallbackHeader} header Callback Header
  * @param {!string} CID Correlation key Id
  * @param {!object} rule Storm rule
  * @param {!number} rule.time Rule interval time
@@ -38,7 +39,7 @@ const { Alarm } = alert(Alerting);
  *
  * @throws {TypeError}
  */
-async function setStormRule(header, CID, rule) {
+async function registerStormRule(header, CID, rule) {
     if (typeof CID !== "string") {
         throw new TypeError("CID param must be a typeof <string>");
     }
@@ -50,7 +51,7 @@ async function setStormRule(header, CID, rule) {
 /**
  * @async
  * @description Set a rule storm
- * @param {*} header Callback Header
+ * @param {!Addon.CallbackHeader} header Callback Header
  * @param {!string} entityName entity name
  * @param {!object} options Assertion options
  * @param {boolean} options.exist If the entity must exist or not
@@ -78,82 +79,77 @@ async function assertEntity(header, entityName, options) {
  * @returns {Promise<void>}
  */
 async function checkEntity(entity, { exist, parent, hasNoChild, descriptors }) {
-    try {
-        const ret = await Alerting.sendOne("events.search_entities", [{ name: entity }]);
-        const isDefined = typeof ret !== "undefined";
+    const ret = await Alerting.sendOne("events.search_entities", [{ name: entity }]);
+    const isDefined = typeof ret !== "undefined";
 
-        // Assert Entity
-        const correlateKey = `alert_ae_${entity.toLowerCase()}`;
-        if (exist && !isDefined) {
-            new Alarm(`Unable to found entity with name ${entity}`, {
-                correlateKey
+    // Assert Entity
+    const correlateKey = `alert_ae_${entity.toLowerCase()}`;
+    if (exist && !isDefined) {
+        new Alarm(`Unable to found entity with name ${entity}`, {
+            correlateKey
+        });
+    }
+    else if (!exist && isDefined) {
+        new Alarm(`Entity '${entity}' has been detected but it should not exist (Alerting Assertion).`, {
+            entity, correlateKey
+        });
+    }
+
+    // Assert that the current Entity have no childs
+    if (isDefined && hasNoChild) {
+        const args = { fields: "name", pattern: `${ret.id}`, patternIdentifier: "parent" };
+        const result = await Alerting.sendOne("events.search_entities", [args]);
+        if (result.length > 0) {
+            new Alarm(`Entity '${entity}' is supposed to have no children but '${result.length}' was detected!`, {
+                entity, correlateKey: `alert_cl_${entity.toLowerCase()}`
             });
         }
-        else if (!exist && isDefined) {
-            new Alarm(`Entity '${entity}' has been detected but it should not exist (Alerting Assertion).`, {
-                entity, correlateKey
-            });
-        }
+    }
 
-        // Assert that the current Entity have no childs
-        if (isDefined && hasNoChild) {
-            const args = { fields: "name", pattern: `${ret.id}`, patternIdentifier: "parent" };
-            const result = await Alerting.sendOne("events.search_entities", [args]);
-            if (result.length > 0) {
-                new Alarm(`Entity '${entity}' is supposed to have no children but '${result.length}' was detected!`, {
-                    entity, correlateKey: `alert_cl_${entity.toLowerCase()}`
-                });
-            }
-        }
+    // Assert Entity Descriptors
+    const descriptorEntries = Object.entries(descriptors);
+    if (isDefined && descriptorEntries.length > 0) {
+        const rawResult = await Alerting.sendOne("events.get_descriptors", [ret.id]);
+        const dbDescriptors = rawResult.reduce((prev, curr) => {
+            prev[curr.key] = curr.value;
 
-        // Assert Entity Descriptors
-        const descriptorEntries = Object.entries(descriptors);
-        if (isDefined && descriptorEntries.length > 0) {
-            const rawResult = await Alerting.sendOne("events.get_descriptors", [ret.id]);
-            const dbDescriptors = rawResult.reduce((prev, curr) => {
-                prev[curr.key] = curr.value;
+            return prev;
+        }, {});
 
-                return prev;
-            }, {});
-
-            for (const [key, value] of descriptorEntries) {
-                const correlateKey = `alert_dc_${entity.toLowerCase()}`;
-                if (Reflect.has(dbDescriptors, key)) {
-                    const currValue = dbDescriptors[key];
-                    if (currValue !== value) {
-                        new Alarm(`Incorrect value for descriptor '${key}' on entity '${entity}'`, {
-                            entity, correlateKey
-                        });
-                    }
-                }
-                else {
-                    new Alarm(`Unable to found descriptor '${key}' on entity '${entity}'`, {
+        for (const [key, value] of descriptorEntries) {
+            const correlateKey = `alert_dc_${entity.toLowerCase()}`;
+            if (Reflect.has(dbDescriptors, key)) {
+                const currValue = dbDescriptors[key];
+                if (currValue !== value) {
+                    new Alarm(`Incorrect value for descriptor '${key}' on entity '${entity}'`, {
                         entity, correlateKey
                     });
                 }
             }
-        }
-
-        // Assert Entity parent id
-        const parentType = typeof parent;
-        if ((parentType === "string" || parentType === "number") && isDefined) {
-            const parentEntity = { id: parent };
-            if (parentType === "string") {
-                const result = await Alerting.sendOne("events.search_entities", [{ name: parent, fields: "id" }]);
-                parentEntity.id = result.id;
-            }
-
-            if (parentEntity.id !== ret.parent) {
-                const correlateKey = `alert_pp_${entity.toLowerCase()}`;
-                // eslint-disable-next-line
-                new Alarm(`Parent ID must be equal to '${parentEntity.id}' for ${entity} but was detected as '${ret.parent}'`, {
+            else {
+                new Alarm(`Unable to found descriptor '${key}' on entity '${entity}'`, {
                     entity, correlateKey
                 });
             }
         }
     }
-    catch (err) {
-        console.error(err);
+
+    // Assert Entity parent id
+    const parentType = typeof parent;
+    if ((parentType === "string" || parentType === "number") && isDefined) {
+        const parentEntity = { id: parent };
+        if (parentType === "string") {
+            const result = await Alerting.sendOne("events.search_entities", [{ name: parent, fields: "id" }]);
+            parentEntity.id = result.id;
+        }
+
+        if (parentEntity.id !== ret.parent) {
+            const correlateKey = `alert_pp_${entity.toLowerCase()}`;
+            // eslint-disable-next-line
+            new Alarm(`Parent ID must be equal to '${parentEntity.id}' for ${entity} but was detected as '${ret.parent}'`, {
+                entity, correlateKey
+            });
+        }
     }
 }
 
@@ -171,25 +167,30 @@ Alerting.of(Addon.Subjects.Alarm.Update).filter(([CID]) => Storms.has(CID)).subs
         });
     },
     error(err) {
-        console.log(`[ALERTING] Alarm.update | Finished with error: ${err}`);
+        Alerting.logger.writeLine(`Alarm.update | Finished with error: ${err}`);
     }
 });
 
-Alerting.on("awake", () => {
-    entityInterval = timer.setInterval(() => {
-        for (const [entity, options] of Entities.entries()) {
-            setImmediate(() => checkEntity(entity, options).catch(console.error));
+Alerting.on("awake", async() => {
+    entityInterval = timer.setInterval(async() => {
+        try {
+            await Promise.all(
+                [...Entities.entries()].map(([entity, options]) => checkEntity(entity, options))
+            );
+        }
+        catch (err) {
+            Alerting.logger.writeLine(err.message);
         }
     }, ENTITY_INTERVAL_MS);
-    Alerting.ready();
+    await Alerting.ready();
 });
 
-Alerting.on("close", () => {
+Alerting.on("sleep", () => {
     timer.clearInterval(entityInterval);
 });
 
-Alerting.registerCallback("register_storm_rule", setStormRule);
-Alerting.registerCallback("assert_entity", assertEntity);
+Alerting.registerCallback(registerStormRule);
+Alerting.registerCallback(assertEntity);
 
 // Export "Alerting" addon for Core
 module.exports = Alerting;
