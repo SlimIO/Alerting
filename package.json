@@ -47,7 +47,7 @@
   "dependencies": {
     "@slimio/addon": "^0.20.2",
     "@slimio/alert": "^0.2.0",
-    "@slimio/timemap": "^0.2.0",
+    "@slimio/timemap": "^0.3.0",
     "@slimio/timer": "^1.0.0"
   }
 }
