@@ -27,7 +27,6 @@ $ slimio --add https://github.com/SlimIO/Alerting
 |[@slimio/addon](https://github.com/SlimIO/Addon#readme)|⚠️Major|Low|Addon default class|
 |[@slimio/alert](https://github.com/SlimIO/Alert#readme)|⚠️Major|Low|Create alerts|
 |[@slimio/timemap](https://github.com/SlimIO/TimeMap#readme)|⚠️Major|Low|Time Map|
-|[@slimio/timer](https://github.com/SlimIO/Timer#readme)|Minor|Low|Diftless interval|
 
 ## Licence
 MIT

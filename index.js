@@ -1,6 +1,5 @@
 // Require Third-Party Dependencies
 import Addon from "@slimio/addon";
-import timer from "@slimio/timer";
 import alert from "@slimio/alert";
 
 // Require Internal Dependencies
@@ -14,8 +13,6 @@ const Storms = new Map();
 
 /** @type {Map<string, any>} */
 const Entities = new Map();
-
-let entityInterval;
 
 // Create Addon
 const Alerting = new Addon("alerting").lockOn("events");
@@ -169,23 +166,11 @@ Alerting.of(Addon.Subjects.Alarm.Update).filter(([CID]) => Storms.has(CID)).subs
     }
 });
 
-Alerting.on("awake", async() => {
-    entityInterval = timer.setInterval(async() => {
-        try {
-            await Promise.all(
-                [...Entities.entries()].map(([entity, options]) => checkEntity(entity, options))
-            );
-        }
-        catch (err) {
-            Alerting.logger.writeLine(err.message);
-        }
-    }, ENTITY_INTERVAL_MS);
-    await Alerting.ready();
-});
-
-Alerting.on("sleep", () => {
-    timer.clearInterval(entityInterval);
-});
+Alerting.registerInterval(async() => {
+    await Promise.all(
+        [...Entities.entries()].map(([entity, options]) => checkEntity(entity, options))
+    );
+}, ENTITY_INTERVAL_MS);
 
 Alerting.registerCallback(registerStormRule);
 Alerting.registerCallback(assertEntity);
