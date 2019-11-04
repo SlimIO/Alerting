@@ -45,7 +45,7 @@
     "jsdoc": "^3.6.2"
   },
   "dependencies": {
-    "@slimio/addon": "^0.21.1",
+    "@slimio/addon": "^0.22.1",
     "@slimio/alert": "^0.2.0",
     "@slimio/timemap": "^0.3.0",
     "@slimio/timer": "^1.0.2"
