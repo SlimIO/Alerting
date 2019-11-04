@@ -1,12 +1,10 @@
-"use strict";
-
 // Require Third-party Dependencies
-const TimeMap = require("@slimio/timemap");
+import TimeMap from "@slimio/timemap";
 
 // Symbols
 const symRows = Symbol("rows");
 
-class StormRule {
+export default class StormRule {
     /**
      * @class StormRule
      * @memberof StormRule#
@@ -50,5 +48,3 @@ class StormRule {
         return false;
     }
 }
-
-module.exports = StormRule;

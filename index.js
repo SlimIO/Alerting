@@ -1,12 +1,10 @@
-"use strict";
-
 // Require Third-Party Dependencies
-const Addon = require("@slimio/addon");
-const timer = require("@slimio/timer");
-const alert = require("@slimio/alert");
+import Addon from "@slimio/addon";
+import timer from "@slimio/timer";
+import alert from "@slimio/alert";
 
 // Require Internal Dependencies
-const StormRule = require("./src/StormRule");
+import StormRule from "./src/StormRule.js";
 
 // CONSTANTS
 const ENTITY_INTERVAL_MS = 5000;
@@ -193,4 +191,4 @@ Alerting.registerCallback(registerStormRule);
 Alerting.registerCallback(assertEntity);
 
 // Export "Alerting" addon for Core
-module.exports = Alerting;
+export default Alerting;

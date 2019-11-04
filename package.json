@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "SlimIO - Alerting Addon",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "ava --verbose",
     "doc": "jsdoc -c ./jsdoc.json -r -R ./README.md -P ./package.json --verbose"
