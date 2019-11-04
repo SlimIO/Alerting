@@ -149,7 +149,7 @@ async function checkEntity(entity, { exist, parent, hasNoChild, descriptors }) {
 }
 
 // Catch Alarm Update events
-Alerting.of(Addon.Subjects.Alarm.Update).filter(([CID]) => Storms.has(CID)).subscribe({
+Alerting.of(Addon.Subjects.alarmUpdate).filter(([CID]) => Storms.has(CID)).subscribe({
     next([CID]) {
         const rule = Storms.get(CID);
         if (!rule.walk()) {
