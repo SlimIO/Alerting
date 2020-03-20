@@ -42,7 +42,7 @@
     "@slimio/eslint-config": "^4.0.0-next.3",
     "ava": "^2.4.0",
     "eslint": "^6.4.0",
-    "husky": "^3.0.5",
+    "husky": "^4.2.3",
     "jsdoc": "^3.6.2"
   },
   "dependencies": {
